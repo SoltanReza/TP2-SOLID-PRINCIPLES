@@ -2,42 +2,29 @@ namespace HotelReservation.Services;
 
 using HotelReservation.Models;
 using HotelReservation.Infrastructure;
+using HotelReservation.Repositories;
 
-// SRP VIOLATION (Example 1): This class mixes three levels of concern:
-// - INFRASTRUCTURE: direct data access, logging
-// - BUSINESS: availability check, price calculation, validation
-// - APPLICATION: workflow orchestration
-public class ReservationService
+public class ReservationService : IService
 {
-    // INFRA: direct data storage
-    private static readonly Dictionary<string, Reservation> _reservations = new();
-    private static readonly List<Room> _rooms = new()
-    {
-        new Room { Id = "101", Type = "Standard", MaxGuests = 2, PricePerNight = 80m },
-        new Room { Id = "102", Type = "Standard", MaxGuests = 2, PricePerNight = 80m },
-        new Room { Id = "201", Type = "Suite", MaxGuests = 2, PricePerNight = 200m },
-        new Room { Id = "301", Type = "Family", MaxGuests = 4, PricePerNight = 120m }
-    };
-
     private static int _counter = 0;
-
-    public string CreateReservation(string guestName, string roomId, DateTime checkIn,
-        DateTime checkOut, int guestCount, string roomType, string email)
+    private  ILogger _logger ; 
+    private IReservationRepository _reservationRepo;
+    
+    public ReservationService( IReservationRepository reservationRepo, ILogger logger)
     {
-        // INFRA: logging
-        Console.WriteLine($"[LOG] Creating reservation for {guestName}...");
+        _reservationRepo = reservationRepo;
+        _logger = logger;
+    }
+    
+    public Reservation CreateReservation(string guestName, string roomId, DateTime checkIn,
+        DateTime checkOut, int guestCount, string roomType, string email , Room room)
+    {
+        
+        _logger.Log($"[LOG] Creating reservation for {guestName}...");
 
-        // BUSINESS: find room
-        var room = _rooms.FirstOrDefault(r => r.Id == roomId);
-        if (room == null)
-            throw new Exception($"Room {roomId} not found");
-
-        // BUSINESS: check capacity
-        if (guestCount > room.MaxGuests)
-            throw new Exception($"Room {roomId} max capacity is {room.MaxGuests}");
-
-        // BUSINESS: check availability
-        var isAvailable = !_reservations.Values.Any(r =>
+       
+       
+        var isAvailable = !_reservationRepo.GetAll().Any(r =>
             r.RoomId == roomId &&
             r.Status != "Cancelled" &&
             r.CheckIn < checkOut &&
@@ -45,8 +32,9 @@ public class ReservationService
         if (!isAvailable)
             throw new Exception($"Room {roomId} is not available for {checkIn:dd/MM} -> {checkOut:dd/MM}");
 
-        // BUSINESS: calculate price
+      
         var nights = (checkOut - checkIn).Days;
+      
         var total = nights * room.PricePerNight;
 
         // APPLICATION: create and store
@@ -64,29 +52,28 @@ public class ReservationService
             Email = email,
             TotalPrice = total
         };
-        _reservations[reservation.Id] = reservation;
+        _reservationRepo.Save(reservation);
 
-        // INFRA: logging
-        Console.WriteLine($"[LOG] Reservation {reservation.Id} created.");
+        
+        _logger.Log($"[LOG] Reservation {reservation.Id} created.");
 
-        return reservation.Id;
+        return reservation;
     }
 
     public Reservation? GetReservation(string id)
     {
-        return _reservations.TryGetValue(id, out var r) ? r : null;
+        return _reservationRepo.GetById(id);
     }
 
-    public List<Reservation> GetAllReservations()
+    public List<Reservation> GetAll()
     {
-        return _reservations.Values.ToList();
+        return _reservationRepo.GetAll();
     }
 
-    public static List<Room> GetRooms() => _rooms;
 
-    public static void Reset()
+    public  void Reset()
     {
-        _reservations.Clear();
+        _reservationRepo.Clear();
         _counter = 0;
     }
 }

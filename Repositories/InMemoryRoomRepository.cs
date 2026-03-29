@@ -1,16 +1,19 @@
 namespace HotelReservation.Repositories;
 
 using HotelReservation.Models;
+using HotelReservation.Services;
 
 public class InMemoryRoomRepository : IRoomRepository
 {
-    private readonly Dictionary<string, Room> _rooms = new();
-    private readonly IReservationRepository _reservationRepo;
-
-    public InMemoryRoomRepository(IReservationRepository reservationRepo)
+    private static readonly Dictionary<string, Room> _rooms = new()
     {
-        _reservationRepo = reservationRepo;
-    }
+        { "101", new Room { Id = "101", Type = "Standard", MaxGuests = 2, PricePerNight = 80m } },
+        { "102", new Room { Id = "102", Type = "Standard", MaxGuests = 2, PricePerNight = 80m } },
+        { "201", new Room { Id = "201", Type = "Suite", MaxGuests = 2, PricePerNight = 200m } },
+        { "301", new Room { Id = "301", Type = "Family", MaxGuests = 4, PricePerNight = 120m } }
+    };
+    private readonly IReservationRepository _reservationRepo = new InMemoryReservationRepository();
+   
 
     public void SeedRooms(List<Room> rooms)
     {
@@ -37,5 +40,9 @@ public class InMemoryRoomRepository : IRoomRepository
     public void Save(Room room)
     {
         _rooms[room.Id] = room;
+    }
+    public List<Room> GetAll()
+    {
+        return _rooms.Values.ToList();
     }
 }

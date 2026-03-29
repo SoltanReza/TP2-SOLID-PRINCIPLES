@@ -3,16 +3,17 @@ namespace HotelReservation.Services;
 using HotelReservation.Infrastructure;
 using HotelReservation.Models;
 
-// DIP VIOLATION (Example 1): High-level business module directly depends on
-// low-level infrastructure modules (InMemoryReservationStore, FileLogger).
-// Impossible to change storage or logging without modifying this class.
 public class BookingService
-{
-    // Direct dependency on concrete implementations
-    private readonly InMemoryReservationStore _store = new();
-    private readonly FileLogger _logger = new();
+{   
+    private readonly IReservationRepository _store;
+    private readonly ILogger _logger;
 
     private int _counter = 0;
+    public BookingService(IReservationRepository store, ILogger logger)
+    {
+        _store = store;
+        _logger = logger;
+    }
 
     public string CreateReservation(string guestName, string roomId, DateTime checkIn,
         DateTime checkOut, int guestCount, string roomType, string email)

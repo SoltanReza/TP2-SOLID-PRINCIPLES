@@ -1,6 +1,7 @@
 namespace HotelReservation.Repositories;
 
 using HotelReservation.Models;
+using HotelReservation.Services;
 
 public class InMemoryReservationRepository : IReservationRepository
 {
@@ -45,11 +46,11 @@ public class InMemoryReservationRepository : IReservationRepository
         _reservations.Remove(id);
     }
 
-    public decimal GetTotalRevenue(DateTime from, DateTime to)
+    public List<Reservation> GetTotalRevenue(DateTime from, DateTime to)
     {
         return _reservations.Values
             .Where(r => r.CheckIn >= from && r.CheckOut <= to && r.Status != "Cancelled")
-            .Sum(r => r.CalculateTotal());
+            .ToList();
     }
 
     public Dictionary<string, int> GetOccupancyStats(DateTime from, DateTime to)
@@ -59,4 +60,15 @@ public class InMemoryReservationRepository : IReservationRepository
             .GroupBy(r => r.RoomType)
             .ToDictionary(g => g.Key, g => g.Count());
     }
+
+    public void Save(Reservation reservation)
+    {
+        _reservations[reservation.Id] = reservation;
+    }
+    public void Clear()
+    {
+        _reservations.Clear();
+    }
+
+    
 }

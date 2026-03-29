@@ -28,15 +28,23 @@ public class CachedRoomRepository : IRoomRepository
         return _cache[roomId];
     }
 
-    public List<Room> GetAvailableRooms(DateTime from, DateTime to)
-    {
-        // BUG: Returns cached data, ignores date parameters, potentially stale
-        return _cache.Values.Where(r => r.IsAvailable).ToList();
-    }
+   public List<Room> GetAvailableRooms(DateTime from, DateTime to)
+{
+    // Respecte le contrat: dépend des dates et renvoie des données fraîches
+    var freshRooms = _inner.GetAvailableRooms(from, to);
+
+    // Optionnel: met en cache les chambres retournées pour accélérer GetById
+    foreach (var room in freshRooms)
+        _cache[room.Id] = room;
+
+    return freshRooms;
+}
 
     public void Save(Room room)
     {
         _inner.Save(room);
-        // BUG: Forgets to invalidate cache -> GetAvailableRooms returns stale data
+        
+        _cache.Clear();
+
     }
 }
